@@ -4,16 +4,10 @@ import customtkinter as ctk
 from tkinter import messagebox
 from fpdf import FPDF
 
-# -------------------------
 # Konfigurasi dasar
-# -------------------------
 DATA_FILE = "data_siswa.json"
 SUBJECTS = ["Matematika", "Bahasa Indonesia", "Bahasa Inggris", "Produktif"]
 
-
-# -------------------------
-# Utility: load / save data
-# -------------------------
 def load_data():
     if not os.path.exists(DATA_FILE):
         return {}
@@ -23,23 +17,21 @@ def load_data():
     except Exception:
         return {}
 
-
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-
 def hitung_rata_status(nilai_dict):
-    total = sum(nilai_dict.values())
+    total = sum(nilai_dict.values()) if nilai_dict else 0
     rata = total / len(nilai_dict) if nilai_dict else 0
     status = "LULUS" if rata >= 75 else "TIDAK LULUS"
     return rata, status
 
-
-def export_pdf_for_student(nama, nilai_dict, folder="."):
+def export_pdf_for_student(nisn, nama, nilai_dict, folder="."):
     """Buat file PDF rapor untuk satu siswa, return path or raise."""
     rata, status = hitung_rata_status(nilai_dict)
-    filename = f"Rapor_{nama.replace(' ', '_')}.pdf"
+    safe_name = nama.replace(" ", "_")
+    filename = f"Rapor_{nisn}_{safe_name}.pdf"
     path = os.path.join(folder, filename)
 
     pdf = FPDF()
@@ -51,7 +43,8 @@ def export_pdf_for_student(nama, nilai_dict, folder="."):
     pdf.ln(6)
 
     pdf.set_font("Arial", size=12)
-    pdf.cell(0, 8, f"Nama: {nama}", ln=True)
+    pdf.cell(0, 8, f"NISN: {nisn}", ln=True)
+    pdf.cell(0, 8, f"Nama : {nama}", ln=True)
     pdf.ln(3)
 
     # Table header
@@ -72,18 +65,16 @@ def export_pdf_for_student(nama, nilai_dict, folder="."):
     pdf.output(path)
     return path
 
-# -------------------------
 # GUI App
-# -------------------------
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
 class RaporApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("Aplikasi Rapor - UAS")
-        self.geometry("900x600")
-        self.minsize(820, 520)
+        self.title("Aplikasi Rapor Sederhana")
+        self.geometry("980x640")
+        self.minsize(860, 540)
 
         # Data
         self.data = load_data()
@@ -92,31 +83,27 @@ class RaporApp(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        self.sidebar = ctk.CTkFrame(self, width=200)
+        self.sidebar = ctk.CTkFrame(self, width=220)
         self.sidebar.grid(row=0, column=0, sticky="nswe", padx=10, pady=10)
-        self.sidebar.grid_rowconfigure(6, weight=1)
+        self.sidebar.grid_rowconfigure(8, weight=1)
 
         self.content = ctk.CTkFrame(self)
-        self.content.grid(row=0, column=1, sticky="nswe", padx=(0,10), pady=10)
+        self.content.grid(row=0, column=1, sticky="nswe", padx=(0, 10), pady=10)
 
         # Sidebar buttons
         self.btn_dashboard = ctk.CTkButton(self.sidebar, text="Dashboard", command=self.show_dashboard)
         self.btn_input = ctk.CTkButton(self.sidebar, text="Input Siswa", command=self.show_input)
         self.btn_search = ctk.CTkButton(self.sidebar, text="Search Siswa", command=self.show_search)
         self.btn_mapel = ctk.CTkButton(self.sidebar, text="Search Mapel", command=self.show_mapel)
-        self.btn_export = ctk.CTkButton(self.sidebar, text="Export PDF", command=self.show_export)
-        self.btn_refresh = ctk.CTkButton(self.sidebar, text="Refresh Data", command=self.reload_data)
 
-        self.btn_dashboard.grid(row=0, column=0, padx=10, pady=8, sticky="we")
-        self.btn_input.grid(row=1, column=0, padx=10, pady=8, sticky="we")
-        self.btn_search.grid(row=2, column=0, padx=10, pady=8, sticky="we")
-        self.btn_mapel.grid(row=3, column=0, padx=10, pady=8, sticky="we")
-        self.btn_export.grid(row=4, column=0, padx=10, pady=8, sticky="we")
-        self.btn_refresh.grid(row=5, column=0, padx=10, pady=8, sticky="we")
+        self.btn_dashboard.grid(row=0, column=0, padx=12, pady=8, sticky="we")
+        self.btn_input.grid(row=1, column=0, padx=12, pady=8, sticky="we")
+        self.btn_search.grid(row=2, column=0, padx=12, pady=8, sticky="we")
+        self.btn_mapel.grid(row=3, column=0, padx=12, pady=8, sticky="we")
 
         # Create pages
         self.pages = {}
-        for Page in (DashboardPage, InputPage, SearchPage, MapelPage, ExportPage):
+        for Page in (DashboardPage, InputPage, SearchPage, MapelPage):
             page = Page(self.content, self)
             self.pages[Page.__name__] = page
             page.grid(row=0, column=0, sticky="nsew")
@@ -126,7 +113,11 @@ class RaporApp(ctk.CTk):
     def show_page(self, page_name):
         page = self.pages.get(page_name)
         if page:
-            page.update_contents()
+            # some pages expect update_contents
+            try:
+                page.update_contents()
+            except Exception:
+                pass
             page.tkraise()
 
     def show_dashboard(self):
@@ -141,26 +132,17 @@ class RaporApp(ctk.CTk):
     def show_mapel(self):
         self.show_page("MapelPage")
 
-    def show_export(self):
-        self.show_page("ExportPage")
-
-    def reload_data(self):
-        self.data = load_data()
-        messagebox.showinfo("Refresh", "Data berhasil direfresh.")
-
-# -------------------------
 # Page: Dashboard
-# -------------------------
 class DashboardPage(ctk.CTkFrame):
     def __init__(self, parent, app):
         super().__init__(parent)
         self.app = app
 
         self.label_title = ctk.CTkLabel(self, text="Dashboard", font=ctk.CTkFont(size=20, weight="bold"))
-        self.label_title.pack(pady=(10, 5))
+        self.label_title.pack(pady=(10, 6))
 
-        self.info_box = ctk.CTkTextbox(self, width=640, height=420, state="disabled")
-        self.info_box.pack(padx=10, pady=10)
+        self.info_box = ctk.CTkTextbox(self, width=720, height=480, state="disabled")
+        self.info_box.pack(padx=10, pady=10, fill="both", expand=True)
 
     def update_contents(self):
         self.info_box.configure(state="normal")
@@ -171,14 +153,13 @@ class DashboardPage(ctk.CTkFrame):
         if not data:
             self.info_box.insert("end", "Belum ada data siswa. Silakan tambah di menu Input Siswa.\n")
         else:
-            for idx, (nama, nilai) in enumerate(sorted(data.items()), start=1):
-                rata, status = hitung_rata_status(nilai)
-                self.info_box.insert("end", f"{idx}. {nama} — Rata-rata: {rata:.2f} — {status}\n")
+            for idx, (nisn, info) in enumerate(sorted(data.items()), start=1):
+                nama = info.get("nama", "-")
+                rata, status = hitung_rata_status(info.get("nilai", {}))
+                self.info_box.insert("end", f"{idx}. {nisn} — {nama} — Rata: {rata:.2f} — {status}\n")
         self.info_box.configure(state="disabled")
 
-# -------------------------
 # Page: Input Siswa
-# -------------------------
 class InputPage(ctk.CTkFrame):
     def __init__(self, parent, app):
         super().__init__(parent)
@@ -190,14 +171,22 @@ class InputPage(ctk.CTkFrame):
         form_frame = ctk.CTkFrame(self)
         form_frame.pack(padx=10, pady=6, fill="x")
 
+        # NISN
+        lbl_nisn = ctk.CTkLabel(form_frame, text="NISN", anchor="w")
+        lbl_nisn.grid(row=0, column=0, padx=6, pady=6, sticky="w")
+        self.entry_nisn = ctk.CTkEntry(form_frame, placeholder_text="1234567890")
+        self.entry_nisn.grid(row=0, column=1, padx=6, pady=6, sticky="we")
+
         # Nama
+        lbl_name = ctk.CTkLabel(form_frame, text="Nama lengkap", anchor="w")
+        lbl_name.grid(row=1, column=0, padx=6, pady=6, sticky="w")
         self.entry_name = ctk.CTkEntry(form_frame, placeholder_text="Nama lengkap")
-        self.entry_name.grid(row=0, column=0, columnspan=2, padx=6, pady=6, sticky="we")
+        self.entry_name.grid(row=1, column=1, padx=6, pady=6, sticky="we")
 
         # Subject entries
         self.subject_vars = {}
-        for i, sub in enumerate(SUBJECTS, start=1):
-            lbl = ctk.CTkLabel(form_frame, text=sub)
+        for i, sub in enumerate(SUBJECTS, start=2):
+            lbl = ctk.CTkLabel(form_frame, text=sub, anchor="w")
             ent = ctk.CTkEntry(form_frame, placeholder_text="0-100")
             lbl.grid(row=i, column=0, padx=6, pady=4, sticky="w")
             ent.grid(row=i, column=1, padx=6, pady=4, sticky="we")
@@ -207,7 +196,7 @@ class InputPage(ctk.CTkFrame):
 
         btn_frame = ctk.CTkFrame(self)
         btn_frame.pack(padx=10, pady=8, fill="x")
-        btn_add = ctk.CTkButton(btn_frame, text="Tambah / Simpan Siswa", command=self.add_siswa)
+        btn_add = ctk.CTkButton(btn_frame, text="Tambah", command=self.add_siswa)
         btn_add.pack(side="left", padx=6)
         btn_clear = ctk.CTkButton(btn_frame, text="Clear", command=self.clear_form)
         btn_clear.pack(side="left", padx=6)
@@ -217,12 +206,18 @@ class InputPage(ctk.CTkFrame):
         pass
 
     def clear_form(self):
+        self.entry_nisn.delete(0, "end")
         self.entry_name.delete(0, "end")
         for ent in self.subject_vars.values():
             ent.delete(0, "end")
 
     def add_siswa(self):
+        nisn = self.entry_nisn.get().strip()
         nama = self.entry_name.get().strip().title()
+
+        if not nisn:
+            messagebox.showwarning("Input kosong", "NISN wajib diisi.")
+            return
         if not nama:
             messagebox.showwarning("Input kosong", "Nama siswa wajib diisi.")
             return
@@ -241,31 +236,43 @@ class InputPage(ctk.CTkFrame):
             messagebox.showerror("Kesalahan nilai", str(e))
             return
 
-        # simpan ke data
-        self.app.data[nama] = nilai_dict
+        # cek duplikat nisn
+        if nisn in self.app.data:
+            messagebox.showwarning("Konfirmasi", f"NISN '{nisn}' sudah terdaftar (Nama: {self.app.data[nisn].get('nama')})")
+            return
+
+        # simpan ke data (key = nisn)
+        self.app.data[nisn] = {"nama": nama, "nilai": nilai_dict}
         save_data(self.app.data)
-        messagebox.showinfo("Sukses", f"Data siswa '{nama}' berhasil disimpan.")
+
+        # update pages
+        try:
+            self.app.pages["DashboardPage"].update_contents()
+            self.app.pages["SearchPage"].perform_search()
+            self.app.pages["MapelPage"].update_contents()
+        except Exception:
+            pass
+
+        messagebox.showinfo("Sukses", f"Data siswa '{nama}' (NISN: {nisn}) berhasil disimpan.")
         self.clear_form()
 
-# -------------------------
 # Page: Search Siswa
-# -------------------------
 class SearchPage(ctk.CTkFrame):
     def __init__(self, parent, app):
         super().__init__(parent)
         self.app = app
 
-        # ============ TITLE ============
-        title = ctk.CTkLabel(self, text="Search Siswa", font=ctk.CTkFont(size=18, weight="bold"))
+        # TITLE
+        title = ctk.CTkLabel(self, text="Search Siswa (pakai NISN atau nama)", font=ctk.CTkFont(size=18, weight="bold"))
         title.pack(pady=(10, 8))
 
-        # ============ SEARCH BAR ============
+        # SEARCH BAR
         top = ctk.CTkFrame(self)
         top.pack(padx=10, pady=6, fill="x")
 
         self.search_var = ctk.StringVar()
         self.entry_search = ctk.CTkEntry(
-            top, placeholder_text="Ketik bagian nama siswa ...",
+            top, placeholder_text="Ketik NISN atau bagian nama siswa ...",
             textvariable=self.search_var
         )
         self.entry_search.pack(side="left", fill="x", expand=True, padx=(0, 6))
@@ -278,32 +285,35 @@ class SearchPage(ctk.CTkFrame):
         body.pack(fill="both", expand=True, padx=10, pady=8)
 
         # LEFT COLUMN — List Siswa
-        self.listbox = ctk.CTkScrollableFrame(body, width=250)
+        self.listbox = ctk.CTkScrollableFrame(body, width=320)
         self.listbox.pack(side="left", fill="both", expand=True)
 
         # RIGHT COLUMN — Detail Siswa
         detail_frame = ctk.CTkFrame(body)
         detail_frame.pack(side="right", fill="y", padx=(8, 0))
 
-        self.detail_box = ctk.CTkTextbox(detail_frame, width=300, height=350)
+        self.detail_box = ctk.CTkTextbox(detail_frame, width=380, height=380)
         self.detail_box.pack(fill="both", expand=True)
 
-        # Export button (disabled by default)
-        self.export_btn = ctk.CTkButton(detail_frame, text="Export PDF", state="disabled")
-        self.export_btn.pack(pady=(8, 5))
+        # TAMBAH sub-frame khusus grid
+        btn_frame = ctk.CTkFrame(detail_frame)
+        btn_frame.pack(pady=10)
 
-        # Tombol Edit & Delete
-        self.edit_btn = ctk.CTkButton(detail_frame, text="Edit Data", state="disabled")
-        self.edit_btn.pack(pady=(5, 5))
+        # tombol pakai grid di dalam btn_frame
+        self.export_btn = ctk.CTkButton(btn_frame, text="Export PDF",text_color="white", width=90)
+        self.export_btn.grid(row=0, column=0, padx=5)
 
-        self.delete_btn = ctk.CTkButton(detail_frame, text="Hapus Siswa", fg_color="red", state="disabled")
-        self.delete_btn.pack(pady=(5, 5))
+        self.edit_btn = ctk.CTkButton(btn_frame, text="Edit Data", width=90)
+        self.edit_btn.grid(row=0, column=1, padx=5)
+
+        self.delete_btn = ctk.CTkButton(btn_frame, text="Hapus Siswa", fg_color="red", width=90)
+        self.delete_btn.grid(row=0, column=2, padx=5)
 
     # dipanggil saat page dibuka
     def update_contents(self):
         self.perform_search()
 
-    # ============ SEARCH FUNCTION ============
+    # SEARCH FUNCTION
     def perform_search(self):
         key = self.search_var.get().strip().lower()
 
@@ -313,12 +323,14 @@ class SearchPage(ctk.CTkFrame):
 
         found_any = False
 
-        # Loop siswa
-        for nama in sorted(self.app.data.keys()):
-            if key == "" or key in nama.lower():
+        # Loop siswa (show "NISN — Nama" buttons)
+        for nisn, info in sorted(self.app.data.items()):
+            nama = info.get("nama", "")
+            if key == "" or key in nisn.lower() or key in nama.lower():
+                label = f"{nisn} — {nama}"
                 btn = ctk.CTkButton(
-                    self.listbox, text=nama, anchor="w",
-                    command=lambda n=nama: self.show_detail(n)
+                    self.listbox, text=label, anchor="w",
+                    command=lambda n=nisn: self.show_detail(n)
                 )
                 btn.pack(fill="x", padx=6, pady=3)
                 found_any = True
@@ -330,7 +342,7 @@ class SearchPage(ctk.CTkFrame):
         # Reset detail panel tiap search
         self.clear_detail()
 
-    # ============ CLEAR DETAIL ============
+    # CLEAR DETAIL
     def clear_detail(self):
         self.detail_box.configure(state="normal")
         self.detail_box.delete("1.0", "end")
@@ -340,9 +352,11 @@ class SearchPage(ctk.CTkFrame):
         self.edit_btn.configure(state="disabled", command=None)
         self.delete_btn.configure(state="disabled", command=None)
 
-    # ============ MENAMPILKAN DETAIL SISWA ============
-    def show_detail(self, nama):
-        nilai = self.app.data.get(nama, {})
+    # MENAMPILKAN DETAIL SISWA
+    def show_detail(self, nisn):
+        info = self.app.data.get(nisn, {})
+        nama = info.get("nama", "-")
+        nilai = info.get("nilai", {})
 
         # Hitung rata dan status
         rata, status = hitung_rata_status(nilai)
@@ -351,7 +365,8 @@ class SearchPage(ctk.CTkFrame):
         self.detail_box.configure(state="normal")
         self.detail_box.delete("1.0", "end")
 
-        self.detail_box.insert("end", f"Nama: {nama}\n\n")
+        self.detail_box.insert("end", f"NISN : {nisn}\n")
+        self.detail_box.insert("end", f"Nama : {nama}\n\n")
         for m, v in nilai.items():
             self.detail_box.insert("end", f"{m}: {v}\n")
 
@@ -363,91 +378,157 @@ class SearchPage(ctk.CTkFrame):
         # Aktifkan tombol export
         self.export_btn.configure(
             state="normal",
-            command=lambda: self.export_pdf(nama, nilai)
+            command=lambda: self.export_pdf(nisn, nama, nilai)
         )
 
         # aktifkan tombol edit
         self.edit_btn.configure(
             state="normal",
-            command=lambda: self.open_edit_popup(nama)
+            command=lambda: self.open_edit_popup(nisn)
         )
 
         # aktifkan tombol delete
         self.delete_btn.configure(
             state="normal",
-            command=lambda: self.delete_student(nama)
+            command=lambda: self.delete_student(nisn)
         )
 
-    def delete_student(self, nama):
-        confirm = messagebox.askyesno("Konfirmasi", f"Yakin ingin menghapus siswa '{nama}'?")
+    def delete_student(self, nisn):
+        confirm = messagebox.askyesno("Konfirmasi", f"Yakin ingin menghapus siswa NISN '{nisn}'?")
         if not confirm:
             return
 
         # hapus dari data
-        del self.app.data[nama]
-        save_data(self.app.data)
+        if nisn in self.app.data:
+            del self.app.data[nisn]
+            save_data(self.app.data)
 
-        messagebox.showinfo("Sukses", f"Siswa '{nama}' berhasil dihapus.")
+        messagebox.showinfo("Sukses", f"Siswa dengan NISN '{nisn}' berhasil dihapus.")
 
-        # refresh halaman
-        self.perform_search()
+        # refresh halaman & other pages
+        try:
+            self.perform_search()
+            self.app.pages["DashboardPage"].update_contents()
+            self.app.pages["ExportPage"].update_contents()
+            self.app.pages["MapelPage"].update_contents()
+        except Exception:
+            pass
 
-    def open_edit_popup(self, nama):
-        nilai = self.app.data[nama]
+    def open_edit_popup(self, nisn):
+        info = self.app.data.get(nisn, {})
+        if not info:
+            messagebox.showerror("Error", "Data siswa tidak ditemukan.")
+            return
+
+        current_name = info.get("nama", "")
+        current_nilai = info.get("nilai", {})
 
         # Buat popup
         win = ctk.CTkToplevel(self)
-        win.title(f"Edit Data - {nama}")
-        win.geometry("350x400")
+        win.title(f"Edit Data - {current_name}")
+        win.geometry("380x520")
+        win.transient(self)
+        win.grab_set()
 
         # Judul
-        ctk.CTkLabel(win, text=f"Edit Nilai {nama}", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=10)
+        ctk.CTkLabel(win, text=f"Edit Data Siswa", font=ctk.CTkFont(size=16, weight="bold")).pack(pady=10)
 
-        # Entry mapel
+        # NISN (bisa diubah)
+        frame_nisn = ctk.CTkFrame(win)
+        frame_nisn.pack(fill="x", padx=12, pady=6)
+        ctk.CTkLabel(frame_nisn, text="NISN", width=120, anchor="w").pack(side="left")
+        ent_nisn = ctk.CTkEntry(frame_nisn)
+        ent_nisn.pack(side="left", fill="x", expand=True)
+        ent_nisn.insert(0, nisn)
+
+        # Nama (bisa diubah)
+        frame_name = ctk.CTkFrame(win)
+        frame_name.pack(fill="x", padx=12, pady=6)
+        ctk.CTkLabel(frame_name, text="Nama", width=120, anchor="w").pack(side="left")
+        ent_name = ctk.CTkEntry(frame_name)
+        ent_name.pack(side="left", fill="x", expand=True)
+        ent_name.insert(0, current_name)
+
+        # Subject entries
         entries = {}
         for sub in SUBJECTS:
             frame = ctk.CTkFrame(win)
-            frame.pack(fill="x", padx=10, pady=5)
+            frame.pack(fill="x", padx=12, pady=4)
 
             ctk.CTkLabel(frame, text=sub, width=120, anchor="w").pack(side="left")
             ent = ctk.CTkEntry(frame)
             ent.pack(side="left", fill="x", expand=True)
-            ent.insert(0, nilai.get(sub, 0))
+            ent.insert(0, str(current_nilai.get(sub, 0)))
             entries[sub] = ent
 
         # Tombol simpan
         def save_edit():
+            new_nisn = ent_nisn.get().strip()
+            new_name = ent_name.get().strip().title()
+            if not new_nisn:
+                messagebox.showerror("Error", "NISN tidak boleh kosong.")
+                return
+            if not new_name:
+                messagebox.showerror("Error", "Nama tidak boleh kosong.")
+                return
+
             try:
                 updated = {}
                 for sub, ent in entries.items():
-                    v = int(ent.get())
+                    vv = ent.get().strip()
+                    if vv == "":
+                        raise ValueError(f"Nilai {sub} tidak boleh kosong.")
+                    v = int(vv)
                     if not (0 <= v <= 100):
                         raise ValueError(f"Nilai {sub} harus antara 0 - 100.")
                     updated[sub] = v
 
-                self.app.data[nama] = updated
+                # Handle rename NISN: kalau ganti nisn, pindahkan key di dict
+                saved_nisn = nisn
+                if new_nisn != nisn:
+                    # jika nisn baru sudah ada, tanyakan konfirmasi timpa
+                    if new_nisn in self.app.data:
+                        ok = messagebox.askyesno("Konfirmasi", f"NISN '{new_nisn}' sudah ada (Nama: {self.app.data[new_nisn].get('nama')}). Timpa data?")
+                        if not ok:
+                            return
+                    # tulis data baru dan hapus yang lama
+                    self.app.data[new_nisn] = {"nama": new_name, "nilai": updated}
+                    if nisn in self.app.data:
+                        del self.app.data[nisn]
+                    saved_nisn = new_nisn
+                else:
+                    # update nilai dan nama pada nisn lama
+                    self.app.data[nisn] = {"nama": new_name, "nilai": updated}
+                    saved_nisn = nisn
+
                 save_data(self.app.data)
 
-                messagebox.showinfo("Sukses", f"Data '{nama}' berhasil diperbarui.")
+                messagebox.showinfo("Sukses", f"Data '{new_name}' (NISN: {saved_nisn}) berhasil diperbarui.")
                 win.destroy()
-                self.show_detail(nama)
+
+                # refresh UI: tampilkan detail siswa yang baru
+                try:
+                    self.perform_search()
+                    self.app.pages["DashboardPage"].update_contents()
+                    self.app.pages["MapelPage"].update_contents()
+                    self.show_detail(saved_nisn)
+                except Exception:
+                    pass
 
             except Exception as e:
                 messagebox.showerror("Error", str(e))
 
-        ctk.CTkButton(win, text="Simpan Perubahan", command=save_edit).pack(pady=15)
+        ctk.CTkButton(win, text="Simpan Perubahan", command=save_edit).pack(pady=12)
 
-    # ============ EXPORT PDF ============
-    def export_pdf(self, nama, nilai):
+    #EXPORT PDF
+    def export_pdf(self, nisn, nama, nilai):
         try:
-            path = export_pdf_for_student(nama, nilai)
+            path = export_pdf_for_student(nisn, nama, nilai)
             messagebox.showinfo("Export Sukses", f"PDF berhasil dibuat:\n{path}")
         except Exception as e:
             messagebox.showerror("Export Gagal", str(e))
 
-# -------------------------
 # Page: Search Mapel
-# -------------------------
 class MapelPage(ctk.CTkFrame):
     def __init__(self, parent, app):
         super().__init__(parent)
@@ -461,7 +542,7 @@ class MapelPage(ctk.CTkFrame):
 
         self.mapel_var = ctk.StringVar(value=SUBJECTS[0])
         self.mapel_menu = ctk.CTkOptionMenu(top, values=SUBJECTS, variable=self.mapel_var)
-        self.mapel_menu.pack(side="left", padx=(0,8))
+        self.mapel_menu.pack(side="left", padx=(0, 8))
 
         btn = ctk.CTkButton(top, text="Tampilkan", command=self.show_mapel_list)
         btn.pack(side="left")
@@ -477,67 +558,16 @@ class MapelPage(ctk.CTkFrame):
         self.result_box.configure(state="normal")
         self.result_box.delete("1.0", "end")
         found = False
-        for nama, nilai in sorted(self.app.data.items()):
+        for nisn, info in sorted(self.app.data.items()):
+            nilai = info.get("nilai", {})
             if mapel in nilai:
-                self.result_box.insert("end", f"{nama}: {nilai[mapel]}\n")
+                self.result_box.insert("end", f"{nisn} — {info.get('nama','-')}: {nilai[mapel]}\n")
                 found = True
         if not found:
             self.result_box.insert("end", "Belum ada data untuk mapel ini.")
         self.result_box.configure(state="disabled")
 
-# -------------------------
-# Page: Export PDF
-# -------------------------
-class ExportPage(ctk.CTkFrame):
-    def __init__(self, parent, app):
-        super().__init__(parent)
-        self.app = app
-
-        title = ctk.CTkLabel(self, text="Export PDF Rapor", font=ctk.CTkFont(size=18, weight="bold"))
-        title.pack(pady=(10, 8))
-
-        frame = ctk.CTkFrame(self)
-        frame.pack(padx=10, pady=8, fill="x")
-
-        self.student_var = ctk.StringVar(value="")
-        self.option = ctk.CTkOptionMenu(frame, values=list(sorted(self.app.data.keys())), variable=self.student_var)
-        self.option.pack(side="left", padx=(0,8), fill="x", expand=True)
-
-        btn = ctk.CTkButton(frame, text="Export Selected", command=self.do_export_selected)
-        btn.pack(side="left", padx=(8,0))
-
-        self.path_label = ctk.CTkLabel(self, text="")
-        self.path_label.pack(padx=10, pady=6)
-
-    def update_contents(self):
-        # refresh option menu values
-        vals = list(sorted(self.app.data.keys()))
-        if not vals:
-            vals = ["-- kosong --"]
-        self.option.configure(values=vals)
-        # if current value not in vals, set first
-        if self.student_var.get() not in vals:
-            self.student_var.set(vals[0])
-
-    def do_export_selected(self):
-        nama = self.student_var.get()
-        if not nama or nama.startswith("--"):
-            messagebox.showwarning("Peringatan", "Pilih siswa untuk diexport.")
-            return
-        nilai = self.app.data.get(nama)
-        if not nilai:
-            messagebox.showerror("Error", "Data siswa tidak ditemukan.")
-            return
-        try:
-            path = export_pdf_for_student(nama, nilai)
-            self.path_label.configure(text=f"PDF dibuat: {path}")
-            messagebox.showinfo("Sukses", f"PDF berhasil dibuat:\n{path}")
-        except Exception as e:
-            messagebox.showerror("Gagal export", str(e))
-
-# -------------------------
 # Run app
-# -------------------------
 if __name__ == "__main__":
     app = RaporApp()
     app.mainloop()
