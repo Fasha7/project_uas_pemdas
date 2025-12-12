@@ -3,6 +3,7 @@ import json
 import customtkinter as ctk
 from tkinter import messagebox
 from fpdf import FPDF
+from tkinter import filedialog
 
 # Konfigurasi dasar
 DATA_FILE = "data_siswa.json"
@@ -39,13 +40,24 @@ def get_predikat(nilai):
     else:
         return "E"
 
-def export_pdf_for_student(nisn, nama, nilai_dict, folder="."):
-    """Buat file PDF rapor untuk satu siswa, return path or raise."""
+def export_pdf_for_student(nisn, nama, nilai_dict):
+    """Buat file PDF rapor untuk satu siswa dengan dialog Save As."""
     rata, status = hitung_rata_status(nilai_dict)
     predikat_rata = get_predikat(rata)
+
     safe_name = nama.replace(" ", "_")
-    filename = f"Rapor_{nisn}_{safe_name}.pdf"
-    path = os.path.join(folder, filename)
+    default_filename = f"Rapor_{nisn}_{safe_name}.pdf"
+
+    # === Dialog Save As ===
+    filepath = filedialog.asksaveasfilename(
+        title="Simpan Rapor PDF",
+        initialfile=default_filename,
+        defaultextension=".pdf",
+        filetypes=[("PDF Files", "*.pdf")]
+    )
+
+    if not filepath:
+        return None  # user cancel
 
     pdf = FPDF()
     pdf.add_page()
@@ -60,13 +72,11 @@ def export_pdf_for_student(nisn, nama, nilai_dict, folder="."):
     pdf.cell(0, 8, f"Nama : {nama}", ln=True)
     pdf.ln(3)
 
-    # Header tabel (3 kolom)
     pdf.set_font("Arial", "B", 12)
     pdf.cell(100, 8, "Mata Pelajaran", border=1, align='C')
     pdf.cell(30, 8, "Nilai", border=1, align='C')
     pdf.cell(30, 8, "Predikat", border=1, align='C', ln=True)
 
-    # Isi tabel
     pdf.set_font("Arial", size=12)
     for mapel, n in nilai_dict.items():
         pred = get_predikat(n)
@@ -79,8 +89,8 @@ def export_pdf_for_student(nisn, nama, nilai_dict, folder="."):
     pdf.cell(0, 8, f"Status     : {status}", ln=True)
     pdf.cell(0, 8, f"Predikat Rata-rata : {predikat_rata}", ln=True)
 
-    pdf.output(path)
-    return path
+    pdf.output(filepath)
+    return filepath
 
 # GUI App
 ctk.set_appearance_mode("System")
@@ -680,16 +690,12 @@ class SearchPage(ctk.CTkFrame):
         ctk.CTkButton(win, text="Simpan Perubahan", command=save_edit).pack(pady=12)
 
     #EXPORT PDF
-    def export_pdf(self, nisn, nama, nilai):
-        try:
-            path = export_pdf_for_student(nisn, nama, nilai)
-            messagebox.showinfo("Export Sukses", f"PDF berhasil dibuat:\n{path}")
-
-            # Buka file (opsional)
-            if os.name == 'nt':  # Windows
-                os.startfile(path)
-        except Exception as e:
-            messagebox.showerror("Export Gagal", str(e))
+    def export_pdf(self, nisn, nama, nilai_dict):
+        path = export_pdf_for_student(nisn, nama, nilai_dict)
+        if path:
+            messagebox.showinfo("Berhasil", f"PDF berhasil disimpan:\n{path}")
+        else:
+            messagebox.showinfo("Dibatalkan", "Export PDF dibatalkan.")
 
 # Page: Search Mapel
 class MapelPage(ctk.CTkFrame):

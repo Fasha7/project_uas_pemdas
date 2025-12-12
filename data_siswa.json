@@ -2,7 +2,7 @@
     "12345": {
         "nama": "Sabrina Auliya Arinditha",
         "nilai": {
-            "Matematika": 85,
+            "Matematika": 80,
             "Bahasa Indonesia": 80,
             "Bahasa Inggris": 90,
             "Produktif": 95
@@ -14,16 +14,8 @@
             "Matematika": 85,
             "Bahasa Indonesia": 90,
             "Bahasa Inggris": 88,
-            "Produktif": 95
-        }
-    },
-    "123457": {
-        "nama": "Rizky Tri Anggara",
-        "nilai": {
-            "Matematika": 79,
-            "Bahasa Indonesia": 80,
-            "Bahasa Inggris": 85,
-            "Produktif": 89
+            "IPA": 76,
+            "IPS": 87
         }
     }
 }
