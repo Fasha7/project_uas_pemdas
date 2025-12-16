@@ -140,6 +140,19 @@ class RaporApp(ctk.CTk):
         self.btn_mapel = ctk.CTkButton(self.sidebar, text="Search Mapel", command=self.show_mapel)
         self.btn_mapel.grid(row=4, column=0, padx=12, pady=8, sticky="we")
 
+        # Simpan semua tombol sidebar
+        self.sidebar_buttons = [
+            self.btn_dashboard,
+            self.btn_siswa,
+            self.btn_nilai,
+            self.btn_search,
+            self.btn_mapel
+        ]
+
+        # Warna aktif = warna hover bawaan theme
+        self.COLOR_NORMAL = self.btn_dashboard.cget("fg_color") 
+        self.COLOR_ACTIVE = self.btn_dashboard.cget("hover_color")
+
         # Create pages
         self.pages = {}
         for Page in (DashboardPage, SiswaPage, NilaiPage, SearchPage, MapelPage):
@@ -157,21 +170,31 @@ class RaporApp(ctk.CTk):
             except Exception:
                 pass
             page.tkraise()
+    def set_active_sidebar(self, active_btn):
+        for btn in self.sidebar_buttons:
+            btn.configure(fg_color=self.COLOR_NORMAL)
+
+        active_btn.configure(fg_color=self.COLOR_ACTIVE)
 
     def show_dashboard(self):
         self.show_page("DashboardPage")
+        self.set_active_sidebar(self.btn_dashboard)
 
     def show_siswa(self):
         self.show_page("SiswaPage")
+        self.set_active_sidebar(self.btn_siswa)
 
     def show_nilai(self):
         self.show_page("NilaiPage")
+        self.set_active_sidebar(self.btn_nilai)
 
     def show_search(self):
         self.show_page("SearchPage")
+        self.set_active_sidebar(self.btn_search)
 
     def show_mapel(self):
         self.show_page("MapelPage")
+        self.set_active_sidebar(self.btn_mapel)
 
 # Page: Dashboard
 class DashboardPage(ctk.CTkFrame):
