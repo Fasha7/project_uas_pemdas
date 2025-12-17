@@ -9,7 +9,6 @@ from tkinter import filedialog
 COLOR_LULUS = "#22c55e"
 COLOR_TIDAK_LULUS = "#ef4444"
 
-# Konfigurasi dasar
 DATA_FILE = "data_siswa.json"
 SUBJECTS = ["Matematika", "Bahasa Indonesia", "Bahasa Inggris", "IPA", "IPS"]
 
@@ -67,31 +66,65 @@ def export_pdf_for_student(nisn, nama, kelas, nilai_dict):
     pdf.set_auto_page_break(auto=True, margin=15)
 
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "RAPOR SISWA", ln=True, align="C")
+    pdf.cell(0, 10, "LAPORAN HASIL BELAJAR SISWA", ln=True, align="C")
+    pdf.cell(0, 10, "(RAPOR)", ln=True, align="C")   
     pdf.ln(6)
-
+    
     pdf.set_font("Arial", size=12)
-    pdf.cell(0, 8, f"NISN : {nisn}", ln=True)
-    pdf.cell(0, 8, f"Nama : {nama}", ln=True)
-    pdf.cell(0, 8, f"Kelas : {kelas}", ln=True)
-    pdf.ln(3)
+
+    label_w = 40
+    colon_w = 2
+    value_w = 0   # sisa halaman
+
+    def row(label, value):
+        pdf.cell(label_w, 8, label)
+        pdf.cell(colon_w, 8, ":")
+        pdf.cell(value_w, 8, str(value), ln=True)
+
+    row("Nama Peserta Didik", nama)
+    row("NISN", nisn)
+    row("Kelas", kelas)
+
+    pdf.ln(6)
+    col_no = 15
+    col_mapel = 85
+    col_nilai = 30
+    col_pred = 30
+    
+    table_width = col_no + col_mapel + col_nilai + col_pred
+    page_width = pdf.w - 2 * pdf.l_margin
+    start_x = (page_width - table_width) / 2 + pdf.l_margin
 
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(100, 8, "Mata Pelajaran", border=1, align='C')
-    pdf.cell(30, 8, "Nilai", border=1, align='C')
-    pdf.cell(30, 8, "Predikat", border=1, align='C', ln=True)
-
+    pdf.set_x(start_x)
+    pdf.cell(col_no, 8, "No", border=1, align="C")
+    pdf.cell(col_mapel, 8, "Mata Pelajaran", border=1, align="C")
+    pdf.cell(col_nilai, 8, "Nilai", border=1, align="C")
+    pdf.cell(col_pred, 8, "Predikat", border=1, align="C", ln=True)
+    
     pdf.set_font("Arial", size=12)
-    for mapel, n in nilai_dict.items():
+    for i, (mapel, n) in enumerate(nilai_dict.items(), start=1):
         pred = get_predikat(n)
-        pdf.cell(100, 8, str(mapel), border=1)
-        pdf.cell(30, 8, str(n), border=1, align='C')
-        pdf.cell(30, 8, pred, border=1, align='C', ln=True)
-
+        pdf.set_x(start_x)
+        pdf.cell(col_no, 8, str(i), border=1, align="C")
+        pdf.cell(col_mapel, 8, mapel, border=1)
+        pdf.cell(col_nilai, 8, str(n), border=1, align="C")
+        pdf.cell(col_pred, 8, pred, border=1, align="C", ln=True)
+    
+    
     pdf.ln(6)
-    pdf.cell(0, 8, f"Rata-rata : {rata:.2f}", ln=True)
-    pdf.cell(0, 8, f"Predikat Rata-rata : {predikat_rata}", ln=True)
-    pdf.cell(0, 8, f"Status     : {status}", ln=True)
+    pdf.set_font("Arial", size=12)
+    label_w = 40
+    colon_w = 2
+    value_w = 0
+    def row(label, value):
+        pdf.cell(label_w, 8, label)
+        pdf.cell(colon_w, 8, ":")
+        pdf.cell(value_w, 8, str(value), ln=True)
+
+    row("Nilai Rata-rata", f"{rata:.2f}")
+    row("Predikat Rata-rata", predikat_rata)
+    row("Status Kelulusan", status)
 
     pdf.output(filepath)
     return filepath
