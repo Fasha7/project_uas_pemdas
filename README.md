@@ -1,5 +1,5 @@
 # project_uas_pemdas
-# 📘 Aplikasi Rapor Sederhana  
+#  Aplikasi Rapor Sederhana  
 **Project UAS Mata Kuliah Pemrograman Dasar**
 
 Aplikasi Rapor Sederhana merupakan aplikasi desktop berbasis Python yang dirancang untuk membantu pengelolaan data siswa dan nilai mata pelajaran.  
@@ -7,13 +7,13 @@ Aplikasi ini mampu melakukan perhitungan nilai rata-rata, menentukan predikat ni
 
 ---
 
-## 📌 Gambaran Umum
+##  Gambaran Umum
 Aplikasi ini dikembangkan untuk mempermudah proses pengolahan data akademik siswa tanpa memerlukan perhitungan secara manual.  
 Seluruh data disimpan secara lokal sehingga dapat diakses kembali meskipun aplikasi telah ditutup.
 
 ---
 
-## ✨ Fitur Aplikasi
+##  Fitur Aplikasi
 - Penambahan data siswa yang meliputi NISN, nama, dan kelas
 - Validasi input data dan nilai siswa
 - Pengisian dan pembaruan nilai mata pelajaran
@@ -29,7 +29,7 @@ Seluruh data disimpan secara lokal sehingga dapat diakses kembali meskipun aplik
 
 ---
 
-## ▶️ Cara Menggunakan Aplikasi
+##  Cara Menggunakan Aplikasi
 1. Buka folder project menggunakan **Visual Studio Code**
 2. Jalankan file `main_rapor.py`
 3. Pilih menu **Tambah Siswa** untuk memasukkan data siswa
@@ -43,7 +43,7 @@ Seluruh data disimpan secara lokal sehingga dapat diakses kembali meskipun aplik
 
 ---
 
-## 🛠️ Cara Menjalankan Program
+##  Cara Menjalankan Program
 1. Pastikan Python telah terinstal pada perangkat
 2. Buka folder project menggunakan **Visual Studio Code**
 3. Buka file `main_rapor.py`
